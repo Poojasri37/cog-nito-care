@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompanionRouteImport } from './routes/companion'
+import { Route as PerceptionRouteImport } from './routes/perception'
+import { Route as TherapyRouteImport } from './routes/therapy'
 import { Route as ApiCompanionRouteImport } from './routes/api/companion'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +25,16 @@ const CompanionRoute = CompanionRouteImport.update({
   path: '/companion',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PerceptionRoute = PerceptionRouteImport.update({
+  id: '/perception',
+  path: '/perception',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TherapyRoute = TherapyRouteImport.update({
+  id: '/therapy',
+  path: '/therapy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCompanionRoute = ApiCompanionRouteImport.update({
   id: '/api/companion',
   path: '/api/companion',
@@ -32,30 +44,44 @@ const ApiCompanionRoute = ApiCompanionRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/companion': typeof CompanionRoute
+  '/perception': typeof PerceptionRoute
+  '/therapy': typeof TherapyRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/companion': typeof CompanionRoute
+  '/perception': typeof PerceptionRoute
+  '/therapy': typeof TherapyRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/companion': typeof CompanionRoute
+  '/perception': typeof PerceptionRoute
+  '/therapy': typeof TherapyRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/companion' | '/api/companion'
+  fullPaths: '/' | '/companion' | '/perception' | '/therapy' | '/api/companion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/companion' | '/api/companion'
-  id: '__root__' | '/' | '/companion' | '/api/companion'
+  to: '/' | '/companion' | '/perception' | '/therapy' | '/api/companion'
+  id:
+    | '__root__'
+    | '/'
+    | '/companion'
+    | '/perception'
+    | '/therapy'
+    | '/api/companion'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompanionRoute: typeof CompanionRoute
+  PerceptionRoute: typeof PerceptionRoute
+  TherapyRoute: typeof TherapyRoute
   ApiCompanionRoute: typeof ApiCompanionRoute
 }
 
@@ -75,6 +101,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompanionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/perception': {
+      id: '/perception'
+      path: '/perception'
+      fullPath: '/perception'
+      preLoaderRoute: typeof PerceptionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/therapy': {
+      id: '/therapy'
+      path: '/therapy'
+      fullPath: '/therapy'
+      preLoaderRoute: typeof TherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/companion': {
       id: '/api/companion'
       path: '/api/companion'
@@ -88,6 +128,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompanionRoute: CompanionRoute,
+  PerceptionRoute: PerceptionRoute,
+  TherapyRoute: TherapyRoute,
   ApiCompanionRoute: ApiCompanionRoute,
 }
 export const routeTree = rootRouteImport
