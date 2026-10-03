@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompanionRouteImport } from './routes/companion'
 import { Route as ApiCompanionRouteImport } from './routes/api/companion'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompanionRoute = CompanionRouteImport.update({
+  id: '/companion',
+  path: '/companion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCompanionRoute = ApiCompanionRouteImport.update({
@@ -25,27 +31,31 @@ const ApiCompanionRoute = ApiCompanionRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/companion': typeof CompanionRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/companion': typeof CompanionRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/companion': typeof CompanionRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/companion'
+  fullPaths: '/' | '/companion' | '/api/companion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/companion'
-  id: '__root__' | '/' | '/api/companion'
+  to: '/' | '/companion' | '/api/companion'
+  id: '__root__' | '/' | '/companion' | '/api/companion'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompanionRoute: typeof CompanionRoute
   ApiCompanionRoute: typeof ApiCompanionRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/companion': {
+      id: '/companion'
+      path: '/companion'
+      fullPath: '/companion'
+      preLoaderRoute: typeof CompanionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/companion': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompanionRoute: CompanionRoute,
   ApiCompanionRoute: ApiCompanionRoute,
 }
 export const routeTree = rootRouteImport
