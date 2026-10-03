@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CaregiverRouteImport } from './routes/caregiver'
 import { Route as CompanionRouteImport } from './routes/companion'
+import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as PerceptionRouteImport } from './routes/perception'
 import { Route as TherapyRouteImport } from './routes/therapy'
 import { Route as ApiCompanionRouteImport } from './routes/api/companion'
@@ -20,9 +22,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CaregiverRoute = CaregiverRouteImport.update({
+  id: '/caregiver',
+  path: '/caregiver',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompanionRoute = CompanionRouteImport.update({
   id: '/companion',
   path: '/companion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemoryRoute = MemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PerceptionRoute = PerceptionRouteImport.update({
@@ -43,14 +55,18 @@ const ApiCompanionRoute = ApiCompanionRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/caregiver': typeof CaregiverRoute
   '/companion': typeof CompanionRoute
+  '/memory': typeof MemoryRoute
   '/perception': typeof PerceptionRoute
   '/therapy': typeof TherapyRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/caregiver': typeof CaregiverRoute
   '/companion': typeof CompanionRoute
+  '/memory': typeof MemoryRoute
   '/perception': typeof PerceptionRoute
   '/therapy': typeof TherapyRoute
   '/api/companion': typeof ApiCompanionRoute
@@ -58,20 +74,38 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/caregiver': typeof CaregiverRoute
   '/companion': typeof CompanionRoute
+  '/memory': typeof MemoryRoute
   '/perception': typeof PerceptionRoute
   '/therapy': typeof TherapyRoute
   '/api/companion': typeof ApiCompanionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/companion' | '/perception' | '/therapy' | '/api/companion'
+  fullPaths:
+    | '/'
+    | '/caregiver'
+    | '/companion'
+    | '/memory'
+    | '/perception'
+    | '/therapy'
+    | '/api/companion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/companion' | '/perception' | '/therapy' | '/api/companion'
+  to:
+    | '/'
+    | '/caregiver'
+    | '/companion'
+    | '/memory'
+    | '/perception'
+    | '/therapy'
+    | '/api/companion'
   id:
     | '__root__'
     | '/'
+    | '/caregiver'
     | '/companion'
+    | '/memory'
     | '/perception'
     | '/therapy'
     | '/api/companion'
@@ -79,7 +113,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CaregiverRoute: typeof CaregiverRoute
   CompanionRoute: typeof CompanionRoute
+  MemoryRoute: typeof MemoryRoute
   PerceptionRoute: typeof PerceptionRoute
   TherapyRoute: typeof TherapyRoute
   ApiCompanionRoute: typeof ApiCompanionRoute
@@ -94,11 +130,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/caregiver': {
+      id: '/caregiver'
+      path: '/caregiver'
+      fullPath: '/caregiver'
+      preLoaderRoute: typeof CaregiverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/companion': {
       id: '/companion'
       path: '/companion'
       fullPath: '/companion'
       preLoaderRoute: typeof CompanionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/memory': {
+      id: '/memory'
+      path: '/memory'
+      fullPath: '/memory'
+      preLoaderRoute: typeof MemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/perception': {
@@ -127,7 +177,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CaregiverRoute: CaregiverRoute,
   CompanionRoute: CompanionRoute,
+  MemoryRoute: MemoryRoute,
   PerceptionRoute: PerceptionRoute,
   TherapyRoute: TherapyRoute,
   ApiCompanionRoute: ApiCompanionRoute,
