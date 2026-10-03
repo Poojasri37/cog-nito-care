@@ -209,11 +209,12 @@ function Tiles() {
   const [moves, setMoves] = useState(0);
   const start = useRef(Date.now());
   useEffect(() => {
-    if (open.length !== 2) return;
+    if (open.length !== 2) return undefined;
     const [a, b] = open;
     setMoves((m) => m + 1);
-    if (cards[a].s === cards[b].s) { setMatched((m) => [...m, cards[a].s]); setOpen([]); }
-    else { const t = setTimeout(() => setOpen([]), 1100); return () => clearTimeout(t); }
+    if (cards[a].s === cards[b].s) { setMatched((m) => [...m, cards[a].s]); setOpen([]); return undefined; }
+    const t = setTimeout(() => setOpen([]), 1100);
+    return () => clearTimeout(t);
   }, [open, cards]);
   useEffect(() => {
     if (matched.length === SYMBOLS.length) {
