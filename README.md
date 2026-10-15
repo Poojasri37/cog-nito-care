@@ -35,7 +35,7 @@ The app can use Vercel for the frontend and Render for its API:
 
 - On Vercel, set `VITE_API_BASE_URL` to the Render web-service origin, for example `https://your-service.onrender.com` (no trailing slash). This is a build-time variable; redeploy after changing it.
 - On Render, set `CORS_ORIGINS` to the exact Vercel site origin, for example `https://your-project.vercel.app`. For more than one allowed site, separate origins with commas.
-- On Render, set `NITRO_PRESET=node-server`, build with `npm ci && npm run build`, and start with `node .output/server/index.mjs`.
+- On Render, set `NITRO_PRESET=node-server`, build with `npm ci --include=dev && npm run build`, and start with `node .output/server/index.mjs`. The build needs Vite and its config wrapper from `devDependencies`; Render may omit those when installing with production settings.
 - Set `OPENROUTER_API_KEY` on Render if you want AI replies and audio transcription.
 
 Keep `VITE_API_BASE_URL` free of secrets. The app defaults to same-origin API requests when it is unset.
