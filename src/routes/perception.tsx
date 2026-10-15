@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Camera, CameraOff, Eye, Search, Activity, ScanFace } from "lucide-react";
+import { Camera, CameraOff, Eye, Search, Activity, ScanFace, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -98,7 +98,7 @@ function Perception() {
   function recognise(f: FamilyMember) {
     setScanning(true);
     setPerson(null);
-    trace("VisionAgent", "Face embedding computed, matching enrolled family gallery");
+    trace("VisionAgent", `Demo scenario: simulated ${f.name}'s arrival`);
     setTimeout(() => {
       setScanning(false);
       setPerson(f);
@@ -149,22 +149,28 @@ function Perception() {
           <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-sidebar">
             <video ref={videoRef} autoPlay muted playsInline className={cn("h-full w-full object-cover -scale-x-100", !streamOn && "hidden")} />
             {!streamOn && (
-              <div className="absolute inset-0 grid place-items-center text-sidebar-foreground">
-                <div className="text-center">
-                  <Eye className="mx-auto h-10 w-10 opacity-60" />
-                  <div className="mt-2 font-display text-xl">Simulated living-room camera</div>
-                  <div className="text-sm opacity-60">Demo mode — pick a scenario on the right</div>
+              <>
+                <img
+                  src="/demo-living-room.svg"
+                  alt="Illustration of a calm living room used for the simulated camera demo"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute left-3 top-3 flex items-center gap-2 rounded-lg bg-background/90 px-3 py-2 text-xs font-semibold">
+                  <Eye className="h-4 w-4 text-primary" />
+                  Simulated scene · no camera recording
                 </div>
-              </div>
+              </>
             )}
             {scanning && (
               <div className="absolute inset-[22%] rounded-2xl border-4 border-accent animate-pulse">
                 <div className="absolute -top-8 left-0 rounded bg-accent px-2 py-1 text-xs font-bold text-accent-foreground">Scanning face…</div>
+                <UserRound className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 text-accent" />
               </div>
             )}
             {person && (
               <div className="absolute inset-[22%] rounded-2xl border-4 border-success">
                 <div className="absolute -top-9 left-0 rounded bg-success px-3 py-1 text-sm font-bold text-primary-foreground">{person.name} · {person.relation} · 94%</div>
+                <UserRound className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 text-success" />
               </div>
             )}
             <div className="absolute bottom-3 left-3 rounded-lg bg-background/85 px-3 py-1.5 text-xs font-semibold">
@@ -186,11 +192,15 @@ function Perception() {
 
         <div className="space-y-6">
           <section className="rounded-2xl border border-border bg-card p-5">
-            <h2 className="flex items-center gap-2 text-xl"><ScanFace className="h-5 w-5 text-primary" /> Family recognition</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Enrolled gallery of {family.length} faces.{state.isDemo ? " Demo simulates who walks into frame." : ""}</p>
+            <h2 className="flex items-center gap-2 text-xl"><ScanFace className="h-5 w-5 text-primary" /> Family recognition scenarios</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {state.isDemo
+                ? `Choose who appears in the simulated scene. This demo does not identify faces automatically.`
+                : `Choose a profile to simulate a visit. Live camera mode measures movement only; it does not identify people.`}
+            </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {family.filter((f) => f.id !== "arthur").map((f) => (
-                <button key={f.id} onClick={() => recognise(f)} className="flex items-center gap-2 rounded-xl border border-border p-2 text-left hover:border-primary">
+                <button key={f.id} onClick={() => recognise(f)} className="flex items-center gap-2 rounded-xl border border-border p-2 text-left hover:border-primary" aria-label={`Simulate ${f.name} arriving`}>
                   <span className="grid h-9 w-9 place-items-center rounded-full text-sm font-bold text-primary-foreground" style={{ background: `oklch(0.55 0.1 ${f.hue})` }}>{f.initials}</span>
                   <span className="text-sm"><b>{f.name}</b><br /><span className="text-muted-foreground">{f.relation}</span></span>
                 </button>

@@ -272,7 +272,7 @@ function Companion() {
     setLatestReply("");
     window.speechSynthesis?.cancel();
     if (startBrowserSpeechRecognition()) return;
-    if (navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined") {
+    if (typeof navigator.mediaDevices !== "undefined" && typeof MediaRecorder !== "undefined") {
       void transcribeRecordedAudio().catch((error: unknown) => {
         console.error("Microphone recording could not start.", error);
         setListening(false);

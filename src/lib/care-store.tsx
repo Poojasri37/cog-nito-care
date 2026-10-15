@@ -19,6 +19,7 @@ import {
   type SemanticFact,
   type FamilyMember,
   type Medication,
+  type Photo,
 } from "./care-data";
 import { getCurrentLocalAccount, getLocalSession, type LocalSession } from "./local-accounts";
 
@@ -37,6 +38,7 @@ type CareState = {
     medications: Medication[];
     objects: typeof OBJECTS;
   };
+  photos: Photo[];
   shortTerm: ShortTerm;
   episodes: Episode[];
   facts: SemanticFact[];
@@ -87,6 +89,7 @@ function initial(session: LocalSession = { role: "demo" }): CareState {
   return {
     isDemo,
     profile,
+    photos: [],
     shortTerm: { currentActivity: "idle", recentPerson: null, mood: "calm", messages: [] },
     episodes: isDemo ? seedEpisodes(now) : [],
     facts: isDemo ? SEED_FACTS : [],
@@ -171,6 +174,8 @@ type Ctx = {
   addNote: (author: string, text: string) => void;
   takeMed: (id: string) => void;
   setShortTerm: (p: Partial<Omit<ShortTerm, "messages">>) => void;
+  addPhoto: (photo: Omit<Photo, "id">) => void;
+  removePhoto: (id: string) => void;
   trace: (step: string, detail: string) => void;
   processUtterance: (text: string) => ReturnType<typeof extractMemories>;
   reset: () => void;
@@ -242,6 +247,13 @@ export function CareProvider({ children }: { children: ReactNode }) {
       trace,
       addEpisode,
       addAlert,
+      addPhoto: (photo) =>
+        setState((s) => ({
+          ...s,
+          photos: [...s.photos, { ...photo, id: uid() }],
+        })),
+      removePhoto: (id) =>
+        setState((s) => ({ ...s, photos: s.photos.filter((photo) => photo.id !== id) })),
       addMessage: (role, text) => {
         const m = { id: uid(), role, text, timestamp: Date.now() };
         setState((s) => ({ ...s, shortTerm: { ...s.shortTerm, messages: [...s.shortTerm.messages, m].slice(-40) } }));

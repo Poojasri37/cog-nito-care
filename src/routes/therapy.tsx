@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/AppShell";
-import { PHOTOS } from "@/lib/care-data";
+import { PHOTOS, type Photo } from "@/lib/care-data";
 import { useCare } from "@/lib/care-store";
 import { speak } from "@/lib/companion-client";
 import { cn } from "@/lib/utils";
@@ -51,21 +51,107 @@ function Therapy() {
 }
 
 function Reminiscence() {
-  const { state, addEpisode, addScore, trace } = useCare();
+  const { state, addEpisode, addPhoto, removePhoto, addScore, trace } = useCare();
   const [i, setI] = useState(0);
   const [p, setP] = useState(0);
   const [answer, setAnswer] = useState("");
   const [shared, setShared] = useState(0);
-  const photo = PHOTOS[i];
+  const [uploading, setUploading] = useState(false);
+  const photos = state.isDemo ? [...PHOTOS, ...state.photos] : state.photos;
+  const photo = photos[i];
   const start = useRef(Date.now());
-  if (!state.isDemo) {
+
+  async function preparePhoto(file: File): Promise<string> {
+    if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+    if (file.size > 10 * 1024 * 1024) throw new Error("Each photo must be smaller than 10 MB.");
+
+    const bitmap = await createImageBitmap(file);
+    try {
+      const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("This browser could not prepare the photo.");
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const result = canvas.toDataURL("image/jpeg", 0.68);
+      if (result.length > 240_000) {
+        throw new Error("This photo is still too large after compression. Choose a smaller image.");
+      }
+      return result;
+    } finally {
+      bitmap.close();
+    }
+  }
+
+  async function uploadPhotos(files: FileList | null) {
+    const selected = Array.from(files ?? []);
+    if (!selected.length) return;
+    if (photos.length + selected.length > 8) {
+      toast.error("This album can store up to 8 photos in this browser.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const prepared: Omit<Photo, "id">[] = [];
+      for (const file of selected) {
+        const src = await preparePhoto(file);
+        const title =
+          file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Family photo";
+        prepared.push({
+          src,
+          title,
+          year: String(new Date().getFullYear()),
+          people: [],
+          story: "A family photo added to this album.",
+          prompts: [
+            "What do you remember about this photo?",
+            "Who is with you here?",
+            "How did this day make you feel?",
+          ],
+        });
+      }
+      prepared.forEach(addPhoto);
+      setI(photos.length);
+      setP(0);
+      toast.success(
+        `${prepared.length} photo${prepared.length === 1 ? "" : "s"} added to this browser's album.`,
+      );
+    } catch (error) {
+      console.error("Could not add photos to the local album.", error);
+      toast.error(error instanceof Error ? error.message : "Could not add those photos.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  if (!photo) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="text-2xl">Your photo album is empty</h2>
-        <p className="mt-2 text-muted-foreground">This new account starts without demo photos or memories. You can still use the games and movement activities while setting up this profile.</p>
-      </div>
+      <section className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-2xl">Add photos to your album</h2>
+        <p className="mt-2 text-muted-foreground">
+          Choose family photos from this device to use in reminiscence sessions. Photos are resized
+          and saved only in this browser.
+        </p>
+        <label className="mt-5 inline-flex min-h-12 cursor-pointer items-center rounded-xl bg-primary px-5 font-semibold text-primary-foreground">
+          {uploading ? "Preparing photos…" : "Choose photos"}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={uploading}
+            onChange={(event) => {
+              void uploadPhotos(event.currentTarget.files);
+              event.currentTarget.value = "";
+            }}
+            className="sr-only"
+          />
+        </label>
+      </section>
     );
   }
+
   function share() {
     if (!answer.trim()) return;
     addEpisode({ category: "PHOTO_MEMORY", type: "reminiscence", description: `About "${photo.title}" (${photo.year}): "${answer.slice(0, 120)}"`, person: photo.people[0], importance: 0.85 });
@@ -84,12 +170,45 @@ function Reminiscence() {
     <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
       <div>
         <img src={photo.src} alt={photo.title} width={1024} height={768} className="aspect-[4/3] w-full rounded-2xl object-cover" />
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {PHOTOS.map((ph, idx) => (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {photos.map((ph, idx) => (
             <button key={ph.id} onClick={() => { setI(idx); setP(0); }} className={cn("overflow-hidden rounded-xl border-4", idx === i ? "border-primary" : "border-transparent")}>
-              <img src={ph.src} alt={ph.title} loading="lazy" width={1024} height={768} className="aspect-[4/3] w-full object-cover" />
+              <img src={ph.src} alt={ph.title} loading="lazy" width={120} height={90} className="h-20 w-24 object-cover" />
             </button>
           ))}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {photos.length < 8 && (
+            <label className="inline-flex min-h-11 cursor-pointer items-center rounded-xl bg-primary px-4 font-semibold text-primary-foreground">
+              {uploading ? "Preparing…" : "Add photos"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={uploading}
+                onChange={(event) => {
+                  void uploadPhotos(event.currentTarget.files);
+                  event.currentTarget.value = "";
+                }}
+                className="sr-only"
+              />
+            </label>
+          )}
+          {state.photos.some((saved) => saved.id === photo.id) && (
+            <button
+              onClick={() => {
+                removePhoto(photo.id);
+                setI(Math.max(0, i - 1));
+                setP(0);
+              }}
+              className="min-h-11 rounded-xl border border-border px-4 text-sm"
+            >
+              Remove this photo
+            </button>
+          )}
+          <span className="text-sm text-muted-foreground">
+            {photos.length}/8 photos in this album
+          </span>
         </div>
       </div>
       <div className="rounded-2xl border border-border bg-card p-6">
