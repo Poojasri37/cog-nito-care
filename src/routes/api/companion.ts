@@ -3,7 +3,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, type ModelMessage } from "ai";
 import { z } from "zod";
 import { apiCorsPreflight, withApiCors } from "@/lib/api-cors.server";
-import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId } from "@/lib/ai/run-id.server";
 
 const Body = z.object({
   messages: z
@@ -43,56 +42,34 @@ export const Route = createFileRoute("/api/companion")({
         const parsed = Body.safeParse(await request.json().catch(() => null));
         if (!parsed.success)
           return withApiCors(request, Response.json({ error: "Invalid request" }, { status: 400 }));
-        const openRouterKey = process.env["OPENROUTER_API_KEY"];
-        const lovableKey = process.env["LOVABLE_API_KEY"];
-        const apiKey = openRouterKey ?? lovableKey;
+        const apiKey = process.env["OPENROUTER_API_KEY"];
         if (!apiKey)
           return withApiCors(
             request,
             Response.json(
-              { error: "Set OPENROUTER_API_KEY or LOVABLE_API_KEY in the server environment." },
+              { error: "Set OPENROUTER_API_KEY in the server environment." },
               { status: 401 },
             ),
           );
 
-        const provider = openRouterKey
-          ? createOpenAI({
-              baseURL: "https://openrouter.ai/api/v1",
-              apiKey: openRouterKey,
-              headers: {
-                "HTTP-Referer": process.env["OPENROUTER_SITE_URL"] ?? "http://localhost:8080",
-                "X-OpenRouter-Title": "CareCompanion",
-              },
-            })
-          : createOpenAI({
-              baseURL: "https://ai.gateway.lovable.dev/v1",
-              apiKey: lovableKey!,
-              headers: { "Lovable-API-Key": lovableKey!, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-              fetch: createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request)).fetch,
-            });
+        const provider = createOpenAI({
+          baseURL: "https://openrouter.ai/api/v1",
+          apiKey,
+          headers: {
+            "HTTP-Referer": process.env["OPENROUTER_SITE_URL"] ?? "http://localhost:8080",
+            "X-OpenRouter-Title": "CareCompanion",
+          },
+        });
         const messages: ModelMessage[] = parsed.data.messages.map((m) => ({
           role: m.role,
           content: m.text,
         }));
         let upstreamError: { status: number; message: string } | null = null;
         const result = streamText({
-          model: openRouterKey
-            ? provider.chat(process.env["OPENROUTER_MODEL"] ?? "openai/gpt-oss-20b:free")
-            : provider.responses("openai/gpt-6-astra"),
+          model: provider.chat(process.env["OPENROUTER_MODEL"] ?? "openai/gpt-oss-20b:free"),
           system: systemPrompt(parsed.data.context, parsed.data.agent),
           messages,
           abortSignal: request.signal,
-          providerOptions: openRouterKey
-            ? undefined
-            : {
-                openai: {
-                  forceReasoning: true,
-                  reasoningEffort: "low",
-                  reasoningSummary: "auto",
-                  store: false,
-                  include: ["reasoning.encrypted_content"],
-                },
-              },
           onError: ({ error }) => {
             const e = error as { statusCode?: number; message?: string };
             upstreamError = { status: e.statusCode ?? 500, message: e.message ?? "AI error" };
