@@ -32,3 +32,11 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Local accounts and AI
+
+Use `/account` to create a browser-local patient or caregiver account, or choose Demo mode to return to the pre-seeded Margaret Dawson demo. New accounts start with an empty memory, family list, and medication list. A caregiver can be linked to a patient using the patient care code when both accounts are created in the same browser. Account credentials and care data are stored in that browser only; there is no server-side account storage or cross-device sync.
+
+To enable OpenRouter-backed companion replies and audio transcription, set `OPENROUTER_API_KEY` in the server environment (for a local PowerShell session: `$env:OPENROUTER_API_KEY="your-private-key"; npm run dev`). The key is used only by server routes and must not be placed in client code or committed. `OPENROUTER_MODEL` and `OPENROUTER_AUDIO_MODEL` can be set to models enabled for the key. Without an OpenRouter key, the existing Lovable AI gateway is used for companion replies when configured.
+
+Voice input records microphone audio and submits it to `/api/voice/transcribe` for OpenRouter transcription; if server transcription is unavailable, browser SpeechRecognition is tried as a fallback (Chrome/Edge are recommended). The remote audio model may incur charges and audio is sent to that provider. The companion reports microphone permission and transcription failures instead of silently pretending speech was captured.

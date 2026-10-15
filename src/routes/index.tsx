@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Camera, Eye, Gamepad2, HeartHandshake, LayoutDashboard, Network, Pill, Users } from "lucide-react";
-import { FAMILY, MEDICATIONS, PATIENT } from "@/lib/care-data";
 import { today, useCare } from "@/lib/care-store";
 
 export const Route = createFileRoute("/")({
@@ -26,7 +25,8 @@ const SCENARIOS = [
 
 function Index() {
   const { state } = useCare();
-  const taken = MEDICATIONS.filter((m) => state.medsTaken[m.id] === today()).length;
+  const { patient, family, medications } = state.profile;
+  const taken = medications.filter((m) => state.medsTaken[m.id] === today()).length;
   return (
     <div className="px-6 py-8 md:px-10">
       <section className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
@@ -39,8 +39,11 @@ function Index() {
             CareCompanion combines voice, vision, routines and a three-tier memory engine to support people living with dementia — and keeps caregivers in the loop.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
+            <Link to="/account" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground hover:bg-primary/90">
+              Create account / Log in <ArrowRight className="h-4 w-4" />
+            </Link>
             <Link to="/companion" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground hover:bg-primary/90">
-              Open Patient Companion <ArrowRight className="h-4 w-4" />
+              {state.isDemo ? "Open Demo Companion" : "Open Patient Companion"} <ArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/caregiver" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 font-semibold hover:bg-secondary">
               <LayoutDashboard className="h-4 w-4" /> Caregiver Command Center
@@ -51,16 +54,16 @@ function Index() {
           <div className="flex items-center gap-4">
             <div className="grid h-16 w-16 place-items-center rounded-full bg-accent font-display text-2xl text-accent-foreground">MD</div>
             <div>
-              <div className="font-display text-2xl">{PATIENT.name}, {PATIENT.age}</div>
-              <div className="text-sm text-muted-foreground">{PATIENT.condition}</div>
+              <div className="font-display text-2xl">{patient.name}{patient.age ? `, ${patient.age}` : ""}</div>
+              <div className="text-sm text-muted-foreground">{patient.condition || "New local profile"}</div>
             </div>
           </div>
           <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
-            <Stat icon={Users} label="Family" value={FAMILY.length} />
+            <Stat icon={Users} label="Family" value={family.length} />
             <Stat icon={Network} label="Memories" value={state.episodes.length + state.facts.length} />
-            <Stat icon={Pill} label="Meds today" value={`${taken}/${MEDICATIONS.length}`} />
+            <Stat icon={Pill} label="Meds today" value={`${taken}/${medications.length}`} />
           </dl>
-          <p className="mt-5 text-sm text-muted-foreground">Former {PATIENT.formerCareer.toLowerCase()}. Calmed by {PATIENT.calmingTopics.slice(0, 3).join(", ")}.</p>
+          {patient.formerCareer && <p className="mt-5 text-sm text-muted-foreground">Former {patient.formerCareer.toLowerCase()}. Calmed by {patient.calmingTopics.slice(0, 3).join(", ")}.</p>}
         </div>
       </section>
 

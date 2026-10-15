@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/AppShell";
-import { FAMILY, OBJECTS, type FamilyMember } from "@/lib/care-data";
+import type { FamilyMember } from "@/lib/care-data";
 import { useCare } from "@/lib/care-store";
 import { speak } from "@/lib/companion-client";
 import { cn } from "@/lib/utils";
@@ -26,13 +26,15 @@ type Mode = "demo" | "live";
 
 function Perception() {
   const { state, addEpisode, addAlert, setShortTerm, trace } = useCare();
+  const family = state.profile.family;
+  const objects = state.profile.objects;
   const { scenario } = Route.useSearch();
   const [mode, setMode] = useState<Mode>("demo");
   const [streamOn, setStreamOn] = useState(false);
   const [person, setPerson] = useState<FamilyMember | null>(null);
   const [scanning, setScanning] = useState(false);
   const [motion, setMotion] = useState<number[]>([]);
-  const [objectHit, setObjectHit] = useState<(typeof OBJECTS)[number] | null>(null);
+  const [objectHit, setObjectHit] = useState<(typeof objects)[number] | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -41,7 +43,10 @@ function Perception() {
 
   useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), []);
   useEffect(() => {
-    if (scenario === "sarah") setTimeout(() => recognise(FAMILY.find((f) => f.id === "sarah")!), 400);
+    if (state.isDemo && scenario === "sarah") {
+      const sarah = family.find((f) => f.id === "sarah");
+      if (sarah) setTimeout(() => recognise(sarah), 400);
+    }
   }, [scenario]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function startCamera() {
@@ -117,7 +122,7 @@ function Perception() {
     }, 1400);
   }
 
-  function findObject(o: (typeof OBJECTS)[number]) {
+  function findObject(o: (typeof objects)[number]) {
     setObjectHit(o);
     speak(`Your ${o.name.toLowerCase()} are usually ${o.usual.toLowerCase()}.`);
     addEpisode({ category: "SAFETY_EVENT", type: "object_search", description: `Helped find ${o.name.toLowerCase()} (${o.usual}).`, importance: 0.55 });
@@ -137,6 +142,7 @@ function Perception() {
             <button onClick={startCamera} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground"><Camera className="h-4 w-4" /> Use my camera</button>
           )}
         </div>
+        {!objects.length && <p className="mt-3 text-sm text-muted-foreground">No object locations are saved in this new profile yet.</p>}
       </PageHeader>
       <div className="grid gap-6 px-6 py-6 md:px-10 xl:grid-cols-[1.5fr_1fr]">
         <div>
@@ -181,16 +187,17 @@ function Perception() {
         <div className="space-y-6">
           <section className="rounded-2xl border border-border bg-card p-5">
             <h2 className="flex items-center gap-2 text-xl"><ScanFace className="h-5 w-5 text-primary" /> Family recognition</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Enrolled gallery of {FAMILY.length} faces. Demo simulates who walks into frame.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Enrolled gallery of {family.length} faces.{state.isDemo ? " Demo simulates who walks into frame." : ""}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              {FAMILY.filter((f) => f.id !== "arthur").map((f) => (
+              {family.filter((f) => f.id !== "arthur").map((f) => (
                 <button key={f.id} onClick={() => recognise(f)} className="flex items-center gap-2 rounded-xl border border-border p-2 text-left hover:border-primary">
                   <span className="grid h-9 w-9 place-items-center rounded-full text-sm font-bold text-primary-foreground" style={{ background: `oklch(0.55 0.1 ${f.hue})` }}>{f.initials}</span>
                   <span className="text-sm"><b>{f.name}</b><br /><span className="text-muted-foreground">{f.relation}</span></span>
                 </button>
               ))}
-              <button onClick={unknownVisitor} className="rounded-xl border border-dashed border-border p-2 text-sm hover:border-destructive">Unknown visitor</button>
+              {state.isDemo && <button onClick={unknownVisitor} className="rounded-xl border border-dashed border-border p-2 text-sm hover:border-destructive">Unknown visitor</button>}
             </div>
+            {!family.length && <p className="mt-3 text-sm text-muted-foreground">No people are enrolled in this new profile yet.</p>}
             {person && (
               <div className="mt-4 rounded-xl bg-secondary p-3 text-sm">
                 <b>Memory surfaced:</b>
@@ -201,7 +208,7 @@ function Perception() {
           <section className="rounded-2xl border border-border bg-card p-5">
             <h2 className="flex items-center gap-2 text-xl"><Search className="h-5 w-5 text-primary" /> Object finder</h2>
             <div className="mt-3 flex flex-wrap gap-2">
-              {OBJECTS.map((o) => (
+              {objects.map((o) => (
                 <button key={o.name} onClick={() => findObject(o)} className={cn("rounded-full border px-3 py-1.5 text-sm", objectHit?.name === o.name ? "border-primary bg-primary text-primary-foreground" : "border-border")}>{o.name}</button>
               ))}
             </div>

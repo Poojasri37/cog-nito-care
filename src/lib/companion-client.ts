@@ -2,12 +2,16 @@ import { FAMILY, OBJECTS } from "./care-data";
 
 export type Agent = "CompanionAgent" | "SafetyAgent" | "MemoryAgent" | "ReminderAgent" | "VisionAgent" | "TherapyAgent";
 
-export function routeIntent(text: string, signals: { confusion: boolean; agitation: boolean; object?: string }): Agent {
+export function routeIntent(
+  text: string,
+  signals: { confusion: boolean; agitation: boolean; object?: string },
+  family: typeof FAMILY = FAMILY,
+): Agent {
   const t = text.toLowerCase();
   if (signals.agitation || signals.confusion) return "SafetyAgent";
   if (signals.object) return "VisionAgent";
   if (/(medicine|pill|tablet|medication)/.test(t)) return "ReminderAgent";
-  if (/(remember|photo|who is|tell me about)/.test(t) || FAMILY.some((f) => t.includes(f.name.toLowerCase()))) return "MemoryAgent";
+  if (/(remember|photo|who is|tell me about)/.test(t) || family.some((f) => t.includes(f.name.toLowerCase()))) return "MemoryAgent";
   if (/(game|play|bored|exercise|stretch)/.test(t)) return "TherapyAgent";
   return "CompanionAgent";
 }

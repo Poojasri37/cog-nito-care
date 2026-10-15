@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   FAMILY,
   MEDICATIONS,
@@ -17,7 +17,10 @@ import {
   type MovementSession,
   type Note,
   type SemanticFact,
+  type FamilyMember,
+  type Medication,
 } from "./care-data";
+import { getCurrentLocalAccount, getLocalSession, type LocalSession } from "./local-accounts";
 
 type ShortTerm = {
   currentActivity: string;
@@ -27,6 +30,13 @@ type ShortTerm = {
 };
 
 type CareState = {
+  isDemo: boolean;
+  profile: {
+    patient: typeof PATIENT;
+    family: FamilyMember[];
+    medications: Medication[];
+    objects: typeof OBJECTS;
+  };
   shortTerm: ShortTerm;
   episodes: Episode[];
   facts: SemanticFact[];
@@ -42,16 +52,48 @@ const KEY = "carecompanion-state-v1";
 const uid = () => Math.random().toString(36).slice(2, 10);
 const today = () => new Date().toISOString().slice(0, 10);
 
-function initial(): CareState {
+function initial(session: LocalSession = { role: "demo" }): CareState {
   const now = Date.now();
+  const account = session.role === "demo" ? null : getCurrentLocalAccount();
+  const isDemo = session.role === "demo";
+  const profile = isDemo
+    ? { patient: PATIENT, family: FAMILY, medications: MEDICATIONS, objects: OBJECTS }
+    : {
+        patient: {
+          ...PATIENT,
+          name: account?.patientName ?? "Patient",
+          preferredName: account?.preferredName ?? "there",
+          age: 0,
+          condition: "",
+          home: "",
+          formerCareer: "",
+          calmingTopics: [],
+          triggers: [],
+        },
+        family: account?.caregiverName
+          ? [{
+              id: `caregiver-${account.id}`,
+              name: account.caregiverName,
+              relation: "Caregiver",
+              initials: account.caregiverName.split(/\s+/).map((part) => part[0] ?? "").join("").slice(0, 2).toUpperCase(),
+              hue: 175,
+              facts: [],
+              lastVisit: "—",
+            }]
+          : [],
+        medications: [],
+        objects: [],
+      };
   return {
+    isDemo,
+    profile,
     shortTerm: { currentActivity: "idle", recentPerson: null, mood: "calm", messages: [] },
-    episodes: seedEpisodes(now),
-    facts: SEED_FACTS,
-    alerts: seedAlerts(now),
-    scores: seedScores(now),
-    movement: seedMovement(now),
-    notes: [{ id: "n1", author: "Sarah (daughter)", text: "Mum was cheerful on Sunday. Loved talking about the Cornwall photos.", timestamp: now - 6 * 86400000 }],
+    episodes: isDemo ? seedEpisodes(now) : [],
+    facts: isDemo ? SEED_FACTS : [],
+    alerts: isDemo ? seedAlerts(now) : [],
+    scores: isDemo ? seedScores(now) : [],
+    movement: isDemo ? seedMovement(now) : [],
+    notes: isDemo ? [{ id: "n1", author: "Sarah (daughter)", text: "Mum was cheerful on Sunday. Loved talking about the Cornwall photos.", timestamp: now - 6 * 86400000 }] : [],
     medsTaken: {},
     agentTrace: [],
   };
@@ -60,13 +102,17 @@ function initial(): CareState {
 /* ---------- Memory formation pipeline (extraction → importance → store/ignore) ---------- */
 export type MemoryCandidate = { category: MemoryCategory; type: string; description: string; person?: string; importance: number };
 
-export function extractMemories(text: string): { candidates: MemoryCandidate[]; signals: { confusion: boolean; agitation: boolean; object?: string } } {
+export function extractMemories(
+  text: string,
+  family: FamilyMember[] = FAMILY,
+  objects: typeof OBJECTS = OBJECTS,
+): { candidates: MemoryCandidate[]; signals: { confusion: boolean; agitation: boolean; object?: string } } {
   const t = text.toLowerCase();
   const candidates: MemoryCandidate[] = [];
-  const person = FAMILY.find((f) => t.includes(f.name.toLowerCase()));
+  const person = family.find((f) => t.includes(f.name.toLowerCase()));
   const confusion = /(where am i|what day|who are you|i don'?t know where|lost|where is arthur|confused|what year)/.test(t);
   const agitation = /(scared|frightened|angry|go home|leave me|help me|upset|afraid|worried)/.test(t);
-  const obj = OBJECTS.find((o) => t.includes(o.name.toLowerCase().split(" ").pop()!));
+  const obj = objects.find((o) => t.includes(o.name.toLowerCase().split(" ").pop()!));
   if (person) candidates.push({ category: "FAMILY_RELATIONSHIP", type: "mentioned_person", description: `Mentioned ${person.name}: "${text.slice(0, 90)}"`, person: person.name, importance: 0.7 });
   if (/(remember when|when i was|as a girl|used to|childhood|my father|my mother)/.test(t)) candidates.push({ category: "CONVERSATION_MEMORY", type: "childhood_memory", description: `Shared a memory: "${text.slice(0, 110)}"`, importance: 0.82 });
   if (/(i love|i like|my favourite|my favorite|i enjoy)/.test(t)) candidates.push({ category: "PREFERENCE", type: "preference", description: `Expressed a preference: "${text.slice(0, 100)}"`, importance: 0.75 });
@@ -97,16 +143,16 @@ export function retrieve(state: CareState, query: string, k = 5) {
 export function buildContext(state: CareState, query: string) {
   const { episodes, facts } = retrieve(state, query);
   const hour = new Date().getHours();
-  const dueMeds = MEDICATIONS.filter((m) => state.medsTaken[m.id] !== today() && parseInt(m.time) <= hour);
+  const dueMeds = state.profile.medications.filter((m) => state.medsTaken[m.id] !== today() && parseInt(m.time) <= hour);
   return {
-    patient: PATIENT,
+    patient: state.profile.patient,
     now: new Date().toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }),
     shortTerm: { activity: state.shortTerm.currentActivity, recentPerson: state.shortTerm.recentPerson, mood: state.shortTerm.mood },
-    family: FAMILY.map((f) => `${f.name} — ${f.relation}: ${f.facts.join("; ")}`),
+    family: state.profile.family.map((f) => `${f.name} — ${f.relation}: ${f.facts.join("; ")}`),
     facts: facts.map((f) => `${f.subject} ${f.relation} ${f.object}`),
     episodes: episodes.map((e) => `[${new Date(e.timestamp).toLocaleDateString("en-GB", { weekday: "short" })}] ${e.description}`),
     dueMedications: dueMeds.map((m) => `${m.name} ${m.dose} at ${m.time} (${m.purpose})`),
-    objects: OBJECTS.map((o) => `${o.name}: ${o.usual}`),
+    objects: state.profile.objects.map((o) => `${o.name}: ${o.usual}`),
   };
 }
 
@@ -135,19 +181,48 @@ const CareContext = createContext<Ctx | null>(null);
 export function CareProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CareState>(initial);
   const [hydrated, setHydrated] = useState(false);
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const [activeSession, setActiveSession] = useState<LocalSession>({ role: "demo" });
 
   useEffect(() => {
+    const session = getLocalSession() ?? { role: "demo" as const };
+    setActiveSession(session);
+    const storageKey = session.role === "demo"
+      ? KEY
+      : `${KEY}:${session.dataOwnerId}`;
     try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setState({ ...initial(), ...JSON.parse(raw) });
-    } catch {}
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<CareState>;
+        const base = initial(session);
+        setState({
+          ...base,
+          ...saved,
+          profile: {
+            ...base.profile,
+            ...saved.profile,
+            family: base.profile.family.length ? base.profile.family : saved.profile?.family ?? [],
+          },
+        });
+      } else {
+        setState(initial(session));
+      }
+    } catch (error) {
+      console.error("Could not load this browser-local care profile.", error);
+      setState(initial(session));
+    }
     setHydrated(true);
   }, []);
   useEffect(() => {
-    if (hydrated) localStorage.setItem(KEY, JSON.stringify(state));
-  }, [state, hydrated]);
+    if (!hydrated) return;
+    const storageKey = activeSession.role === "demo"
+      ? KEY
+      : `${KEY}:${activeSession.dataOwnerId}`;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(state));
+    } catch (error) {
+      console.error("Could not save this browser-local care profile.", error);
+    }
+  }, [state, hydrated, activeSession]);
 
   const trace = useCallback((step: string, detail: string) => {
     setState((s) => ({ ...s, agentTrace: [{ id: uid(), step, detail, timestamp: Date.now() }, ...s.agentTrace].slice(0, 40) }));
@@ -187,12 +262,12 @@ export function CareProvider({ children }: { children: ReactNode }) {
       addNote: (author, text) => setState((s) => ({ ...s, notes: [{ id: uid(), author, text, timestamp: Date.now() }, ...s.notes] })),
       takeMed: (id) => {
         setState((s) => ({ ...s, medsTaken: { ...s.medsTaken, [id]: today() } }));
-        const m = MEDICATIONS.find((x) => x.id === id);
+        const m = state.profile.medications.find((x) => x.id === id);
         if (m) addEpisode({ category: "ROUTINE", type: "medication_taken", description: `Took ${m.name} ${m.dose}.`, importance: 0.45 });
       },
       setShortTerm: (p) => setState((s) => ({ ...s, shortTerm: { ...s.shortTerm, ...p } })),
       processUtterance: (text) => {
-        const res = extractMemories(text);
+        const res = extractMemories(text, state.profile.family, state.profile.objects);
         trace("Memory Extraction", `${res.candidates.length} candidate(s) kept after importance filter`);
         res.candidates.forEach((c) => addEpisode(c));
         if (res.signals.confusion) {
@@ -209,14 +284,14 @@ export function CareProvider({ children }: { children: ReactNode }) {
             ...s.shortTerm,
             currentActivity: "conversation",
             mood: res.signals.agitation ? "anxious" : res.signals.confusion ? "confused" : s.shortTerm.mood === "anxious" ? "calm" : s.shortTerm.mood,
-            recentPerson: FAMILY.find((f) => text.toLowerCase().includes(f.name.toLowerCase()))?.name ?? s.shortTerm.recentPerson,
+            recentPerson: state.profile.family.find((f) => text.toLowerCase().includes(f.name.toLowerCase()))?.name ?? s.shortTerm.recentPerson,
           },
         }));
         return res;
       },
-      reset: () => setState(initial()),
+      reset: () => setState(initial(activeSession)),
     }),
-    [state, hydrated, trace, addEpisode, addAlert],
+    [state, hydrated, trace, addEpisode, addAlert, activeSession],
   );
 
   return <CareContext.Provider value={value}>{children}</CareContext.Provider>;

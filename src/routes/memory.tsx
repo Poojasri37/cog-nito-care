@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader } from "@/components/AppShell";
-import { FAMILY } from "@/lib/care-data";
 import { retrieve, useCare } from "@/lib/care-store";
 
 export const Route = createFileRoute("/memory")({
@@ -50,8 +49,8 @@ function MemoryPage() {
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-xl">Long-term knowledge graph</h2>
           <svg viewBox="0 0 300 220" className="mt-3 w-full">
-            {FAMILY.map((f, i) => {
-              const a = (i / FAMILY.length) * Math.PI * 2;
+            {state.profile.family.map((f, i) => {
+              const a = (i / Math.max(1, state.profile.family.length)) * Math.PI * 2;
               const x = 150 + Math.cos(a) * 95, y = 110 + Math.sin(a) * 80;
               return (
                 <g key={f.id}>
@@ -62,7 +61,7 @@ function MemoryPage() {
               );
             })}
             <circle cx="150" cy="110" r="26" fill="var(--primary)" />
-            <text x="150" y="114" textAnchor="middle" fontSize="11" fill="var(--primary-foreground)">Margaret</text>
+            <text x="150" y="114" textAnchor="middle" fontSize="11" fill="var(--primary-foreground)">{state.profile.patient.preferredName}</text>
           </svg>
           <ul className="mt-3 max-h-48 space-y-1 overflow-auto text-sm">
             {state.facts.map((f) => <li key={f.id}>{f.subject} <i className="text-muted-foreground">{f.relation}</i> <b>{f.object}</b></li>)}

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AlertTriangle, Check, HeartPulse } from "lucide-react";
 import { PageHeader } from "@/components/AppShell";
-import { MEDICATIONS, ROUTINE } from "@/lib/care-data";
+import { ROUTINE } from "@/lib/care-data";
 import { today, useCare } from "@/lib/care-store";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +38,7 @@ function Caregiver() {
   const avg = (g: string) => { const x = state.scores.filter((s) => s.game === g).slice(-5); return x.length ? Math.round(x.reduce((a, b) => a + b.score, 0) / x.length) : 0; };
 
   function checkMissed() {
-    MEDICATIONS.filter((m) => parseInt(m.time) < hour && state.medsTaken[m.id] !== today()).forEach((m) =>
+    state.profile.medications.filter((m) => parseInt(m.time) < hour && state.medsTaken[m.id] !== today()).forEach((m) =>
       addAlert({ level: "warning", kind: "missed_medication", message: `${m.name} ${m.dose} (due ${m.time}) not confirmed.` }));
   }
 
@@ -90,7 +90,7 @@ function Caregiver() {
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-xl">Today's routine & medication</h2>
           <ul className="mt-3 space-y-1 text-sm">
-            {MEDICATIONS.map((m) => {
+            {state.profile.medications.map((m) => {
               const ok = state.medsTaken[m.id] === today();
               return (
                 <li key={m.id} className="flex items-center justify-between rounded-lg bg-secondary px-3 py-2">
@@ -100,9 +100,10 @@ function Caregiver() {
               );
             })}
           </ul>
-          <ul className="mt-4 space-y-1 text-sm text-muted-foreground">
+          {state.isDemo && <ul className="mt-4 space-y-1 text-sm text-muted-foreground">
             {ROUTINE.map((r) => <li key={r.time} className={parseInt(r.time) <= hour ? "line-through" : ""}>{r.time} {r.label}</li>)}
-          </ul>
+          </ul>}
+          {!state.profile.medications.length && <p className="mt-3 text-sm text-muted-foreground">No medications have been added to this new local profile yet.</p>}
           <div className="mt-3 text-sm">Movement sessions: <b>{state.movement.length}</b>, latest posture {state.movement[state.movement.length - 1]?.postureScore ?? "—"}%</div>
         </section>
         <section className="rounded-2xl border border-border bg-card p-5">

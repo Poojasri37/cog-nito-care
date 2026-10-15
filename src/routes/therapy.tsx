@@ -51,13 +51,21 @@ function Therapy() {
 }
 
 function Reminiscence() {
-  const { addEpisode, addScore, trace } = useCare();
+  const { state, addEpisode, addScore, trace } = useCare();
   const [i, setI] = useState(0);
   const [p, setP] = useState(0);
   const [answer, setAnswer] = useState("");
   const [shared, setShared] = useState(0);
   const photo = PHOTOS[i];
   const start = useRef(Date.now());
+  if (!state.isDemo) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-2xl">Your photo album is empty</h2>
+        <p className="mt-2 text-muted-foreground">This new account starts without demo photos or memories. You can still use the games and movement activities while setting up this profile.</p>
+      </div>
+    );
+  }
   function share() {
     if (!answer.trim()) return;
     addEpisode({ category: "PHOTO_MEMORY", type: "reminiscence", description: `About "${photo.title}" (${photo.year}): "${answer.slice(0, 120)}"`, person: photo.people[0], importance: 0.85 });
