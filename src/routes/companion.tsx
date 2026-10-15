@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { buildContext, today, useCare } from "@/lib/care-store";
 import { mockReply, routeIntent, speak, streamCompanion } from "@/lib/companion-client";
+import { apiUrl } from "@/lib/api-url";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/companion")({
@@ -230,7 +231,10 @@ function Companion() {
       formData.append("audio", file, "voice-input.webm");
 
       try {
-        const res = await fetch("/api/voice/transcribe", { method: "POST", body: formData });
+        const res = await fetch(apiUrl("/api/voice/transcribe"), {
+          method: "POST",
+          body: formData,
+        });
         const payload = (await res.json().catch(() => null)) as {
           text?: string;
           note?: string;
