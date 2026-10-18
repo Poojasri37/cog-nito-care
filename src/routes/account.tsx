@@ -17,7 +17,6 @@ function AccountPage() {
   const [patientCode, setPatientCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
 
@@ -27,7 +26,7 @@ function AccountPage() {
     setWorking(true);
     try {
       if (mode === "create") {
-        const result = await createLocalAccount({
+        await createLocalAccount({
           role,
           email,
           password,
@@ -37,8 +36,6 @@ function AccountPage() {
           caregiverName,
           inviteCode: patientCode,
         });
-        setInviteCode(result.inviteCode ?? "");
-        if (result.inviteCode) return;
       } else {
         await loginLocalAccount(email, password, role);
       }
@@ -52,10 +49,6 @@ function AccountPage() {
 
   function enterDemo() {
     setLocalSession({ role: "demo" });
-    window.location.assign("/");
-  }
-
-  function continueWithCreatedAccount() {
     window.location.assign("/companion");
   }
 
@@ -63,16 +56,8 @@ function AccountPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl items-center px-4 py-10">
       <section className="w-full rounded-3xl border border-border bg-card p-6 shadow-sm md:p-9">
         <p className="text-sm font-semibold uppercase tracking-widest text-primary">CareCompanion</p>
-        <h1 className="mt-2 font-display text-3xl">{inviteCode ? "Patient account created" : mode === "create" ? "Create a local account" : "Log in"}</h1>
-        {inviteCode ? (
-          <div className="mt-6 space-y-4">
-            <p>Your new patient profile is empty and saved only in this browser. Share this code with the caregiver who should access this patient profile:</p>
-            <p className="rounded-xl bg-secondary p-4 text-center font-mono text-2xl font-bold tracking-[0.3em]">{inviteCode}</p>
-            <p className="text-sm text-muted-foreground">Caregiver accounts must be created in this same browser to link locally. Data is not synchronized to other devices.</p>
-            <button onClick={continueWithCreatedAccount} className="min-h-12 w-full rounded-xl bg-primary px-4 font-semibold text-primary-foreground">Continue to companion</button>
-          </div>
-        ) : (
-          <>
+        <h1 className="mt-2 font-display text-3xl">{mode === "create" ? "Create a local account" : "Log in"}</h1>
+        <>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Accounts and care information stay in this browser; there is no server account or cross-device sync. Use Demo mode to keep exploring the existing Margaret demo.
             </p>
@@ -126,8 +111,7 @@ function AccountPage() {
               <button onClick={enterDemo} className="font-semibold text-primary underline">Continue in Demo mode</button>
               <Link to="/" className="text-muted-foreground underline">Back to overview</Link>
             </div>
-          </>
-        )}
+        </>
       </section>
     </main>
   );
